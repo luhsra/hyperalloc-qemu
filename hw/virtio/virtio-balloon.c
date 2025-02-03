@@ -38,34 +38,12 @@
 #include "hw/virtio/virtio-access.h"
 
 #define BALLOON_PAGE_SIZE  (1 << VIRTIO_BALLOON_PFN_SHIFT)
+#define BALLOON_HUGE_PAGE_SIZE  (1 << VIRTIO_BALLOON_HUGE_PAGE_SHIFT)
 
 typedef struct PartiallyBalloonedPage {
     ram_addr_t base_gpa;
     unsigned long *bitmap;
 } PartiallyBalloonedPage;
-
-static void virtio_balloon_pbp_free(PartiallyBalloonedPage *pbp)
-{
-    if (!pbp->bitmap) {
-        return;
-    }
-    g_free(pbp->bitmap);
-    pbp->bitmap = NULL;
-}
-
-static void virtio_balloon_pbp_alloc(PartiallyBalloonedPage *pbp,
-                                     ram_addr_t base_gpa,
-                                     long subpages)
-{
-    pbp->base_gpa = base_gpa;
-    pbp->bitmap = bitmap_new(subpages);
-}
-
-static bool virtio_balloon_pbp_matches(PartiallyBalloonedPage *pbp,
-                                       ram_addr_t base_gpa)
-{
-    return pbp->base_gpa == base_gpa;
-}
 
 static bool virtio_balloon_inhibited(void)
 {
@@ -78,68 +56,22 @@ static bool virtio_balloon_inhibited(void)
 }
 
 static void balloon_inflate_page(VirtIOBalloon *balloon,
-                                 MemoryRegion *mr, hwaddr mr_offset,
-                                 PartiallyBalloonedPage *pbp)
+                                 MemoryRegion *mr, hwaddr mr_offset)
 {
     void *addr = memory_region_get_ram_ptr(mr) + mr_offset;
-    ram_addr_t rb_offset, rb_aligned_offset, base_gpa;
+    ram_addr_t rb_offset;
     RAMBlock *rb;
-    size_t rb_page_size;
-    int subpages;
 
     /* XXX is there a better way to get to the RAMBlock than via a
      * host address? */
     rb = qemu_ram_block_from_host(addr, false, &rb_offset);
-    rb_page_size = qemu_ram_pagesize(rb);
+    qemu_ram_pagesize(rb);
 
-    if (rb_page_size == BALLOON_PAGE_SIZE) {
-        /* Easy case */
-
-        ram_block_discard_range(rb, rb_offset, rb_page_size);
-        /* We ignore errors from ram_block_discard_range(), because it
-         * has already reported them, and failing to discard a balloon
-         * page is not fatal */
-        return;
-    }
-
-    /* Hard case
-     *
-     * We've put a piece of a larger host page into the balloon - we
-     * need to keep track until we have a whole host page to
-     * discard
-     */
-    warn_report_once(
-"Balloon used with backing page size > 4kiB, this may not be reliable");
-
-    rb_aligned_offset = QEMU_ALIGN_DOWN(rb_offset, rb_page_size);
-    subpages = rb_page_size / BALLOON_PAGE_SIZE;
-    base_gpa = memory_region_get_ram_addr(mr) + mr_offset -
-               (rb_offset - rb_aligned_offset);
-
-    if (pbp->bitmap && !virtio_balloon_pbp_matches(pbp, base_gpa)) {
-        /* We've partially ballooned part of a host page, but now
-         * we're trying to balloon part of a different one.  Too hard,
-         * give up on the old partial page */
-        virtio_balloon_pbp_free(pbp);
-    }
-
-    if (!pbp->bitmap) {
-        virtio_balloon_pbp_alloc(pbp, base_gpa, subpages);
-    }
-
-    set_bit((rb_offset - rb_aligned_offset) / BALLOON_PAGE_SIZE,
-            pbp->bitmap);
-
-    if (bitmap_full(pbp->bitmap, subpages)) {
-        /* We've accumulated a full host page, we can actually discard
-         * it now */
-
-        ram_block_discard_range(rb, rb_aligned_offset, rb_page_size);
-        /* We ignore errors from ram_block_discard_range(), because it
-         * has already reported them, and failing to discard a balloon
-         * page is not fatal */
-        virtio_balloon_pbp_free(pbp);
-    }
+    ram_block_discard_range(rb, rb_offset, BALLOON_HUGE_PAGE_SIZE);
+    /* We ignore errors from ram_block_discard_range(), because it
+     * has already reported them, and failing to discard a balloon
+     * page is not fatal */
+    return;
 }
 
 static void balloon_deflate_page(VirtIOBalloon *balloon,
@@ -147,21 +79,18 @@ static void balloon_deflate_page(VirtIOBalloon *balloon,
 {
     void *addr = memory_region_get_ram_ptr(mr) + mr_offset;
     ram_addr_t rb_offset;
-    RAMBlock *rb;
-    size_t rb_page_size;
     void *host_addr;
     int ret;
 
     /* XXX is there a better way to get to the RAMBlock than via a
      * host address? */
-    rb = qemu_ram_block_from_host(addr, false, &rb_offset);
-    rb_page_size = qemu_ram_pagesize(rb);
+    qemu_ram_block_from_host(addr, false, &rb_offset);
 
-    host_addr = (void *)((uintptr_t)addr & ~(rb_page_size - 1));
+    host_addr = (void *)((uintptr_t)addr & ~(BALLOON_HUGE_PAGE_SIZE - 1));
 
     /* When a page is deflated, we hint the whole host page it lives
      * on, since we can't do anything smaller */
-    ret = qemu_madvise(host_addr, rb_page_size, QEMU_MADV_WILLNEED);
+    ret = qemu_madvise(host_addr, BALLOON_HUGE_PAGE_SIZE, QEMU_MADV_WILLNEED);
     if (ret != 0) {
         warn_report("Couldn't MADV_WILLNEED on balloon deflate: %s",
                     strerror(errno));
@@ -393,7 +322,6 @@ static void virtio_balloon_handle_output(VirtIODevice *vdev, VirtQueue *vq)
     MemoryRegionSection section;
 
     for (;;) {
-        PartiallyBalloonedPage pbp = {};
         size_t offset = 0;
         uint32_t pfn;
 
@@ -410,7 +338,7 @@ static void virtio_balloon_handle_output(VirtIODevice *vdev, VirtQueue *vq)
             offset += 4;
 
             section = memory_region_find(get_system_memory(), pa,
-                                         BALLOON_PAGE_SIZE);
+                                         BALLOON_HUGE_PAGE_SIZE);
             if (!section.mr) {
                 trace_virtio_balloon_bad_addr(pa);
                 continue;
@@ -428,7 +356,7 @@ static void virtio_balloon_handle_output(VirtIODevice *vdev, VirtQueue *vq)
             if (!virtio_balloon_inhibited()) {
                 if (vq == s->ivq) {
                     balloon_inflate_page(s, section.mr,
-                                         section.offset_within_region, &pbp);
+                                         section.offset_within_region);
                 } else if (vq == s->dvq) {
                     balloon_deflate_page(s, section.mr, section.offset_within_region);
                 } else {
@@ -441,7 +369,6 @@ static void virtio_balloon_handle_output(VirtIODevice *vdev, VirtQueue *vq)
         virtqueue_push(vq, elem, 0);
         virtio_notify(vdev, vq);
         g_free(elem);
-        virtio_balloon_pbp_free(&pbp);
     }
 }
 
@@ -761,6 +688,10 @@ static void virtio_balloon_set_config(VirtIODevice *vdev,
     if (dev->actual != oldactual) {
         qapi_event_send_balloon_change(vm_ram_size -
                         ((ram_addr_t) dev->actual << VIRTIO_BALLOON_PFN_SHIFT));
+        if (dev->actual == dev->num_pages) {
+            info_report("virtio_balloon_end %lu ns",
+                        qemu_clock_get_ns(QEMU_CLOCK_REALTIME));
+        }
     }
     dev->poison_val = 0;
     if (virtio_balloon_page_poison_support(dev)) {
@@ -783,11 +714,14 @@ static void virtio_balloon_stat(void *opaque, BalloonInfo *info)
 {
     VirtIOBalloon *dev = opaque;
     info->actual = get_current_ram_size() - ((uint64_t) dev->actual <<
-                                             VIRTIO_BALLOON_PFN_SHIFT);
+                                             VIRTIO_BALLOON_HUGE_PAGE_SHIFT);
 }
 
 static void virtio_balloon_to_target(void *opaque, ram_addr_t target)
 {
+    info_report("virtio_balloon_start %lu ns",
+                qemu_clock_get_ns(QEMU_CLOCK_REALTIME));
+
     VirtIOBalloon *dev = VIRTIO_BALLOON(opaque);
     VirtIODevice *vdev = VIRTIO_DEVICE(dev);
     ram_addr_t vm_ram_size = get_current_ram_size();
@@ -796,7 +730,7 @@ static void virtio_balloon_to_target(void *opaque, ram_addr_t target)
         target = vm_ram_size;
     }
     if (target) {
-        dev->num_pages = (vm_ram_size - target) >> VIRTIO_BALLOON_PFN_SHIFT;
+        dev->num_pages = (vm_ram_size - target) >> VIRTIO_BALLOON_HUGE_PAGE_SHIFT;
         virtio_notify_config(vdev);
     }
     trace_virtio_balloon_to_target(target, dev->num_pages);

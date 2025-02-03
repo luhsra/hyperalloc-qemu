@@ -40,6 +40,7 @@
 
 /* Size of a PFN in the balloon interface. */
 #define VIRTIO_BALLOON_PFN_SHIFT 12
+#define VIRTIO_BALLOON_HUGE_PAGE_SHIFT 21
 
 #define VIRTIO_BALLOON_CMD_ID_STOP	0
 #define VIRTIO_BALLOON_CMD_ID_DONE	1
