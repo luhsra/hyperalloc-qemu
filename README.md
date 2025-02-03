@@ -65,8 +65,8 @@ static Property virtio_llfree_balloon_properties[] = {
     -object iothread,id=iothread3 \
     -object iothread,id=iothread4 \
     -device '{"driver":"virtio-llfree-balloon","auto-mode-iothread":"auto-mode-iothread","auto-mode":true,"iothread-vq-mapping":[{"iothread":"iothread1"},{"iothread":"iothread2"},{"iothread":"iothread3"},{"iothread":"iothread4"}]}' \
-	-device '{"driver":"vfio-pci","host":'\"$PCI_DEVICE\"'}'
-  	# ...
+    -device '{"driver":"vfio-pci","host":'\"$PCI_DEVICE\"'}'
+    # ...
 ```
 
 This is an example of configuring LLFree-Balloon on the command line.
@@ -79,7 +79,7 @@ QEMU internally processes all command lines of the same syntax, before moving on
 Direct device assignment only works if `virtio-llfree-balloon` and vfio-pci use the same syntax and `virtio-llfree-balloon` is placed in the argument list before vfio-pci.
 
 
-# Using the QEMU Monitor
+## Using the QEMU Monitor
 
 LLFree-Balloon offers two QEMU Monitor commands.
 ```sh
@@ -99,7 +99,7 @@ llfree-balloon
 ```
 to set the target size (in bytes).
 
-# Provoking a VFIO Issue
+## Provoking a VFIO Issue
 
 In [hw/virtio/virtio-llfree-balloon.c](hw/virtio/virtio-llfree-balloon.c) set the flag:
 
