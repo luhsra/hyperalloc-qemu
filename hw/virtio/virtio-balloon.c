@@ -761,6 +761,10 @@ static void virtio_balloon_set_config(VirtIODevice *vdev,
     if (dev->actual != oldactual) {
         qapi_event_send_balloon_change(vm_ram_size -
                         ((ram_addr_t) dev->actual << VIRTIO_BALLOON_PFN_SHIFT));
+        if (dev->actual == dev->num_pages) {
+            info_report("virtio_balloon_end %lu ns",
+                        qemu_clock_get_ns(QEMU_CLOCK_REALTIME));
+        }
     }
     dev->poison_val = 0;
     if (virtio_balloon_page_poison_support(dev)) {
@@ -791,6 +795,9 @@ static void virtio_balloon_to_target(void *opaque, ram_addr_t target)
     VirtIOBalloon *dev = VIRTIO_BALLOON(opaque);
     VirtIODevice *vdev = VIRTIO_DEVICE(dev);
     ram_addr_t vm_ram_size = get_current_ram_size();
+
+    info_report("virtio_balloon_start %lu ns",
+                qemu_clock_get_ns(QEMU_CLOCK_REALTIME));
 
     if (target > vm_ram_size) {
         target = vm_ram_size;

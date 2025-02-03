@@ -78,6 +78,8 @@ static const QDevAlias qdev_alias_table[] = {
     { "virtio-balloon-device", "virtio-balloon", QEMU_ARCH_VIRTIO_MMIO },
     { "virtio-balloon-ccw", "virtio-balloon", QEMU_ARCH_VIRTIO_CCW },
     { "virtio-balloon-pci", "virtio-balloon", QEMU_ARCH_VIRTIO_PCI },
+    { "virtio-llfree-balloon-device", "virtio-llfree-balloon", QEMU_ARCH_VIRTIO_MMIO },
+    { "virtio-llfree-balloon-pci", "virtio-llfree-balloon", QEMU_ARCH_VIRTIO_PCI },
     { "virtio-blk-device", "virtio-blk", QEMU_ARCH_VIRTIO_MMIO },
     { "virtio-blk-ccw", "virtio-blk", QEMU_ARCH_VIRTIO_CCW },
     { "virtio-blk-pci", "virtio-blk", QEMU_ARCH_VIRTIO_PCI },

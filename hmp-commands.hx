@@ -1106,7 +1106,7 @@ ERST
 
 SRST
 ``dump-guest-memory [-p]`` *filename* *begin* *length*
-  \ 
+  \
 ``dump-guest-memory [-z|-l|-s|-w]`` *filename*
   Dump guest memory to *protocol*. The file can be processed with crash or
   gdb. Without ``-z|-l|-s|-w``, the dump format is ELF.
@@ -1405,6 +1405,20 @@ ERST
 
 SRST
 ``balloon`` *value*
+  Request VM to change its memory allocation to *value* (in MB).
+ERST
+
+    {
+        .name       = "set_link",
+        .args_type  = "name:s,up:b",
+        .params     = "name on|off",
+        .help       = "change the link status of a network adapter",
+        .cmd        = hmp_set_link,
+        .command_completion = set_link_completion,
+    },
+
+SRST
+``llfree_balloon`` *value*
   Request VM to change its memory allocation to *value* (in MB).
 ERST
 

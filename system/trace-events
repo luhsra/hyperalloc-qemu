@@ -4,6 +4,10 @@
 # Since requests are raised via monitor, not many tracepoints are needed.
 balloon_event(void *opaque, unsigned long addr) "opaque %p addr %lu"
 
+# llfree-balloon.c
+# Since requests are raised via monitor, not many tracepoints are needed.
+llfree_balloon_event(void *opaque, unsigned long addr) "opaque %p addr %lu"
+
 # ioport.c
 cpu_in(unsigned int addr, char size, unsigned int val) "addr 0x%x(%c) value %u"
 cpu_out(unsigned int addr, char size, unsigned int val) "addr 0x%x(%c) value %u"

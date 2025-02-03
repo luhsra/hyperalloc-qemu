@@ -180,6 +180,21 @@ void hmp_info_balloon(Monitor *mon, const QDict *qdict)
     qapi_free_BalloonInfo(info);
 }
 
+void hmp_info_llfree_balloon(Monitor *mon, const QDict *qdict)
+{
+    LLfreeBalloonInfo *info;
+    Error *err = NULL;
+
+    info = qmp_query_llfree_balloon(&err);
+    if (hmp_handle_error(mon, err)) {
+        return;
+    }
+
+    monitor_printf(mon, "llfree balloon: actual=%" PRId64 "\n", info->actual >> 20);
+
+    qapi_free_LLfreeBalloonInfo(info);
+}
+
 void hmp_system_reset(Monitor *mon, const QDict *qdict)
 {
     qmp_system_reset(NULL);
@@ -242,6 +257,16 @@ void hmp_balloon(Monitor *mon, const QDict *qdict)
     qmp_balloon(value, &err);
     hmp_handle_error(mon, err);
 }
+
+void hmp_llfree_balloon(Monitor *mon, const QDict *qdict)
+{
+    int64_t value = qdict_get_int(qdict, "value");
+    Error *err = NULL;
+
+    qmp_llfree_balloon(value, &err);
+    hmp_handle_error(mon, err);
+}
+
 
 void hmp_info_memory_devices(Monitor *mon, const QDict *qdict)
 {

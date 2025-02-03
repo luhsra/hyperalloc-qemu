@@ -1356,6 +1356,8 @@ if get_option('hv_balloon').allowed() and have_system
   endif
 endif
 
+have_llfree = get_option('llfree').allowed()
+
 libssh = not_found
 if not get_option('libssh').auto() or have_block
   libssh = dependency('libssh', version: '>=0.8.7',
@@ -3253,6 +3255,16 @@ hw_arch = {}
 target_arch = {}
 target_system_arch = {}
 target_user_arch = {}
+
+# add llfree-c allocator for virtio-llfree-balloon
+llfree_c_dep = not_found
+if have_llfree
+  llfree_c = subproject('llfree-c')
+  llfree_c_public_dep = llfree_c.get_variable('libllc_public_dep')
+  llfree_c_private_dep = llfree_c.get_variable('libllc_private_dep')
+  subdir('llfree-qemu')
+endif
+
 
 ###############
 # Trace files #

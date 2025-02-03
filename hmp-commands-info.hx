@@ -547,6 +547,20 @@ ERST
     },
 
 SRST
+  ``info llfree_balloon``
+    Show balloon information.
+ERST
+
+    {
+        .name       = "qtree",
+        .args_type  = "",
+        .params     = "",
+        .help       = "show device tree",
+        .cmd        = hmp_info_qtree,
+    },
+
+
+SRST
   ``info qtree``
     Show device tree.
 ERST

@@ -1138,6 +1138,66 @@
   'data': { 'actual': 'int' } }
 
 ##
+# @llfree-balloon:
+#
+# Request the llfree balloon driver to change its balloon size.
+#
+# @value: the target logical size of the VM in bytes.  We can deduce
+#     the size of the balloon using this formula:
+#
+#        logical_vm_size = vm_ram_size - balloon_size
+#
+#     From it we have: balloon_size = vm_ram_size - @value
+#
+# Returns:
+# - Nothing on success
+# - If the llfree balloon driver is enabled but not functional because the
+#   KVM kernel module cannot support it, KVMMissingCap
+# - If no llfree balloon device is present, DeviceNotActive
+#
+# Example:
+#
+# -> { "execute": "llfree-balloon", "arguments": { "value": 536870912 } }
+# <- { "return": {} }
+#
+# With a 2.5GiB guest this command inflated the ballon to 3GiB.
+##
+{ 'command': 'llfree-balloon', 'data': {'value': 'int'} }
+
+##
+# @LLfreeBalloonInfo:
+#
+# Information about the guest llfree balloon device.
+#
+# @actual: the logical size of the VM in bytes Formula used:
+#     logical_vm_size = vm_ram_size - balloon_size
+#
+# Since: 0.14
+##
+{ 'struct': 'LLfreeBalloonInfo', 'data': {'actual': 'int' } }
+
+##
+# @query-llfree-balloon:
+#
+# Return information about the llfree balloon device.
+#
+# Returns:
+# - @LLfreeBalloonInfo on success
+# - If the llfree balloon driver is enabled but not functional because the
+#   KVM kernel module cannot support it, KVMMissingCap
+# - If no balloon device is present, DeviceNotActive
+#
+# Example:
+#
+# -> { "execute": "query-llfree-balloon" }
+# <- { "return": {
+#          "actual": 1073741824
+#       }
+#    }
+##
+{ 'command': 'query-llfree-balloon', 'returns': 'LLfreeBalloonInfo' }
+
+##
 # @HvBalloonInfo:
 #
 # hv-balloon guest-provided memory status information.
