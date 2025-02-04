@@ -1357,6 +1357,9 @@ if get_option('hv_balloon').allowed() and have_system
 endif
 
 have_llfree = get_option('llfree').allowed()
+config_host_data.set('CONFIG_LLFREE_BALLOON', have_llfree)
+balloon_huge = get_option('balloon-huge').allowed()
+config_host_data.set('CONFIG_VIRTIO_BALLOON_HUGE', balloon_huge)
 
 libssh = not_found
 if not get_option('libssh').auto() or have_block
@@ -4400,6 +4403,8 @@ summary_info += {'libudev':           libudev}
 summary_info += {'FUSE lseek':        fuse_lseek.found()}
 summary_info += {'selinux':           selinux}
 summary_info += {'libdw':             libdw}
+summary_info += {'llfree-balloon':    have_llfree}
+summary_info += {'balloon-huge':      balloon_huge}
 summary(summary_info, bool_yn: true, section: 'Dependencies')
 
 if host_arch == 'unknown'

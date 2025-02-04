@@ -145,6 +145,7 @@ meson_options_help() {
   printf "%s\n" '  live-block-migration'
   printf "%s\n" '                  block migration in the main migration stream'
   printf "%s\n" '  llfree          Add support for the llfree allocator'
+  printf "%s\n" '  balloon-huge    Add enable huge pages for virtio-balloon'
   printf "%s\n" '  lzfse           lzfse support for DMG images'
   printf "%s\n" '  lzo             lzo compression support'
   printf "%s\n" '  malloc-trim     enable libc malloc_trim() for memory optimization'
@@ -340,6 +341,8 @@ _meson_option_parse() {
     --disable-hv-balloon) printf "%s" -Dhv_balloon=disabled ;;
     --enable-llfree) printf "%s" -Dllfree=enabled ;;
     --disable-llfree) printf "%s" -Dllfree=disabled ;;
+    --enable-balloon-huge) printf "%s" -Dballoon-huge=enabled ;;
+    --disable-balloon-huge) printf "%s" -Dballoon-huge=disabled ;;
     --enable-hvf) printf "%s" -Dhvf=enabled ;;
     --disable-hvf) printf "%s" -Dhvf=disabled ;;
     --iasl=*) quote_sh "-Diasl=$2" ;;
